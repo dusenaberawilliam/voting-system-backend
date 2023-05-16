@@ -15,6 +15,7 @@ module.exports = {
       email: {
         allowNull: false,
         type: Sequelize.STRING,
+        unique: true,
       },
       phone: {
         allowNull: false,
@@ -35,6 +36,10 @@ module.exports = {
       password: {
         allowNull: false,
         type: Sequelize.STRING,
+      },
+      isApproved: {
+        allowNull: false,
+        type: Sequelize.BOOLEAN,
       },
       createdAt: {
         allowNull: false,
