@@ -1,5 +1,7 @@
 const Joi = require("joi");
 const bcrypt = require("bcryptjs");
+const { sign } = require("jsonwebtoken");
+require("dotenv").config();
 
 const { User } = require("../models");
 
@@ -9,7 +11,6 @@ const schema = Joi.object({
   password: Joi.string().required(),
   phone: Joi.string().required(),
   gender: Joi.string().required(),
-  role: Joi.string().required(),
   address: Joi.string().required(),
 });
 
@@ -57,25 +58,61 @@ const createUser = async (req, res) => {
         .json({ message: "Invalid data", error: error.details[0].message });
     }
 
+    const existingUser = await User.findOne({ where: { email: value.email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already taken' });
+    }
+
     const user = {
       fullName: value.fullName,
       email: value.email,
       phone: value.phone,
       gender: value.gender,
-      role: value.role,
+      role: "staff",
+      isApproved: false,
       address: value.address,
       password: bcrypt.hashSync(value.password, 4),
     };
 
-    const savedUser = await User.create({ message: "User added", data: user });
+    const savedUser = await User.create(user);
 
-    res.status(200).json(savedUser);
+    const { password, ...excludePassword } = savedUser.toJSON();
+
+    res.status(200).json({ message: "User added", data: excludePassword });
   } catch (error) {
     res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
   }
 };
+
+const approveUser = async (req, res) => {
+  try {
+    if (!req.params.id) {
+      return res
+        .status(400)
+        .json({ message: "Invalid data", error: "ID is required" });
+    }
+    const id = req.params.id;
+
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const approvedUser = await user.update({
+      isApproved: true,
+    });
+
+    const { password, ...excludePassword } = approvedUser.toJSON();
+
+    res.status(200).json({ message: "User approved", data: excludePassword });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+}
 
 // Deleting user
 const deleteUser = async (req, res) => {
@@ -122,7 +159,10 @@ const updateUser = async (req, res) => {
       role,
       address,
     });
-    res.status(200).json({ message: "User Updated", data: updatedUser });
+
+    const { password, ...excludePassword } = updatedUser.toJSON();
+
+    res.status(200).json({ message: "User Updated", data: excludePassword });
   } catch (error) {
     console.log(error);
     res
@@ -131,8 +171,47 @@ const updateUser = async (req, res) => {
   }
 };
 
-exports.getAllUsers = getAllUsers;
-exports.createUser = createUser;
-exports.deleteUser = deleteUser;
-exports.updateUser = updateUser;
-exports.getSingleUser = getSingleUser;
+const authenticateUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: "user doesn't exist" });
+    }
+    if (!user.isApproved) {
+      return res.status(406).json({ error: "Your account is not approved yet" });
+    }
+    bcrypt.compare(password, user.password).then((match) => {
+      if (!match) {
+        return res.json({ error: "Wrong username or password" });
+      }
+      const accessToken = sign(
+        { email: user.email, id: user.id, name: user.name, role: user.role },
+        process.env.SECRET_KEY_TOKEN, { expiresIn: process.env.TOKEN_EXPIRES_IN }
+      );
+
+      res.status(200).json({
+        token: accessToken,
+        fullName: user.fullName,
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      });
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+module.exports = {
+  getAllUsers,
+  createUser,
+  deleteUser,
+  updateUser,
+  getSingleUser,
+  authenticateUser,
+  approveUser
+};
