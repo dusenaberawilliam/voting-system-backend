@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
   ApprovedLeaders.init(
     {
       candidateId: DataTypes.INTEGER,
-      startDate: DataTypes.DATE,
-      endDate: DataTypes.DATE,
+      leadershipStartDate: DataTypes.DATE,
+      leadershipEndDate: DataTypes.DATE,
     },
     {
       sequelize,
