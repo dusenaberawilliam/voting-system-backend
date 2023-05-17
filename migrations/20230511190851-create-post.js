@@ -10,6 +10,7 @@ module.exports = {
       },
       postName: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       createdAt: {
         allowNull: false,

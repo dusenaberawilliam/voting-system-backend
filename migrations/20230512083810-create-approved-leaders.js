@@ -18,11 +18,11 @@ module.exports = {
         },
         onDelete: "CASCADE",
       },
-      LeadershipStartDate: {
+      leadershipStartDate: {
         allowNull: false,
         type: Sequelize.DATE,
       },
-      LeadershipEndDate: {
+      leadershipEndDate: {
         allowNull: false,
         type: Sequelize.DATE,
       },

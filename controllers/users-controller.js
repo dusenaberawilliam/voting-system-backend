@@ -16,9 +16,39 @@ const schema = Joi.object({
 
 // Getting all users
 const getAllUsers = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
   try {
-    const users = await User.findAll({ attributes: { exclude: ["password"] } });
-    res.status(200).json(users);
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await User.findAndCountAll({
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+      attributes: { exclude: ["password"] }
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    const hasNextPage = page < totalPages;
+    const nextPage = hasNextPage ? page + 1 : null;
+
+    const hasPreviousPage = page > 1;
+    const previousPage = hasPreviousPage ? page - 1 : null;
+
+
+    res.status(200).json({
+      totalUsers: count,
+      totalPages,
+      currentPage: page,
+      hasNextPage,
+      nextPage,
+      hasPreviousPage,
+      previousPage,
+      data: rows
+    });
   } catch (error) {
     console.log(error);
     res

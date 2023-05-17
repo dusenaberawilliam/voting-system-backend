@@ -7,6 +7,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use("/api/users", require("./routes/users-router"));
+app.use("/api/posts", require("./routes/posts-router"));
+app.use("/api/activities-permission", require("./routes/activities-permissions-router"))
 app.all("*", (req, res) => {
   res.status(404).send({ message: "Route not found" });
 });
