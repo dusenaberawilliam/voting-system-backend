@@ -9,7 +9,7 @@ const schema = Joi.object({
 // Getting all Posts
 const getAllPosts = async (req, res) => {
     try {
-        const posts = await Post.findAll({ attributes: { exclude: ["password"] } });
+        const posts = await Post.findAll();
         res.status(200).json(posts);
     } catch (error) {
         console.log(error);

@@ -1,5 +1,28 @@
 const { CampaignPermission, VotesPermission } = require("../models");
 
+
+const getCampaignStatus = async (req, res) => {
+    try {
+        const campaignStatus = await CampaignPermission.findAll();
+        res.status(200).json(campaignStatus);
+    } catch (error) {
+        res
+            .status(500)
+            .json({ message: "Internal server error", error: error.message });
+    }
+};
+
+const getVotingStatus = async (req, res) => {
+    try {
+        const votingStatus = await VotesPermission.findAll();
+        res.status(200).json(votingStatus);
+    } catch (error) {
+        res
+            .status(500)
+            .json({ message: "Internal server error", error: error.message });
+    }
+};
+
 // Change status to allow canditate post submission
 const candidateCampaignPermission = async (req, res) => {
     try {
@@ -16,12 +39,10 @@ const candidateCampaignPermission = async (req, res) => {
             { status: true },
             { where: { id: getStatus[0].id } }
         );
-        res
-            .status(200)
-            .json({
-                message: "Candidate campaign is now allowed to start",
-                data: updateStatus,
-            });
+        res.status(200).json({
+            message: "Candidate campaign is now allowed to start",
+            data: updateStatus,
+        });
     } catch (error) {
         res
             .status(500)
@@ -45,12 +66,10 @@ const candidateCampaignDenial = async (req, res) => {
             { status: false },
             { where: { id: getStatus[0].id } }
         );
-        res
-            .status(200)
-            .json({
-                message: "Candidate campaign is now paused",
-                data: updateStatus,
-            });
+        res.status(200).json({
+            message: "Candidate campaign is now paused",
+            data: updateStatus,
+        });
     } catch (error) {
         res
             .status(500)
@@ -115,4 +134,6 @@ module.exports = {
     candidateCampaignDenial,
     startVotingsPermission,
     votingsDenial,
+    getCampaignStatus,
+    getVotingStatus
 };

@@ -1,6 +1,7 @@
 const Joi = require("joi");
+const sequelize = require("sequelize");
 
-const { Candidate, Post, User } = require("../models");
+const { Candidate, Post, User, Vote, CampaignPermission, VotesPermission } = require("../models");
 
 const schema = Joi.object({
     postId: Joi.string().required(),
@@ -12,7 +13,6 @@ const schema = Joi.object({
 const getAllCandidates = async (req, res) => {
     try {
         const candidates = await Candidate.findAll({
-            attributes: { exclude: ["password"] },
             include: [Post, { model: User, attributes: { exclude: ["password"] } }],
         });
         res.status(200).json(candidates);
@@ -31,8 +31,14 @@ const getAllCurrentCandidates = async (req, res) => {
         const getCurrentYear = todaysDate.getFullYear();
 
         const candidates = await Candidate.findAll({
-            where: { electionYear: getCurrentYear },
-            include: [Post, { model: User, attributes: { exclude: ["password"] } }],
+            where: { electionYear: getCurrentYear, isApproved: true },
+            include: [
+                Post,
+                {
+                    model: User,
+                    attributes: { exclude: ["password"] },
+                },
+            ],
         });
         res.status(200).json(candidates);
     } catch (error) {
@@ -67,6 +73,13 @@ const getSingleCandidate = async (req, res) => {
 // Adding new candidate
 const createCandidate = async (req, res) => {
     try {
+        const campaignStatus = await CampaignPermission.findAll();
+        if (!campaignStatus[0].status) {
+            return res
+                .status(400)
+                .json({ error: "Campaign has not started yet" });
+        }
+
         const { error, value } = schema.validate(req.body);
         if (error) {
             return res
@@ -195,6 +208,114 @@ const updateCandidate = async (req, res) => {
     }
 };
 
+// Getting all Votes that happened
+const getAllVotes = async (req, res) => {
+    try {
+        const candidatesVoted = await Candidate.findAll({
+            include: [
+                User,
+                Post,
+                {
+                    model: Vote,
+                    attributes: [],
+                },
+            ],
+            attributes: {
+                include: [
+                    [sequelize.fn("COUNT", sequelize.col("Votes.id")), "voteCounts"],
+                ],
+            },
+            group: ["Candidate.id"],
+        });
+
+        res.status(200).json(candidatesVoted);
+    } catch (error) {
+        console.log(error);
+        res
+            .status(500)
+            .json({ message: "Internal server error", error: error.message });
+    }
+};
+
+// Getting all current year candidates votes
+const getAllCurrentVotes = async (req, res) => {
+    try {
+        const todaysDate = new Date();
+        const getCurrentYear = todaysDate.getFullYear();
+
+        const candidatesVoted = await Candidate.findAll({
+            where: { electionYear: getCurrentYear },
+            include: [
+                User,
+                Post,
+                {
+                    model: Vote,
+                    attributes: [],
+                },
+            ],
+            attributes: {
+                include: [
+                    [sequelize.fn("COUNT", sequelize.col("Votes.id")), "voteCounts"],
+                ],
+            },
+            group: ["Candidate.id"],
+        });
+
+        res.status(200).json(candidatesVoted);
+    } catch (error) {
+        console.log(error);
+        res
+            .status(500)
+            .json({ message: "Internal server error", error: error.message });
+    }
+};
+
+// Adding new vote
+const voteCandidate = async (req, res) => {
+    try {
+        const votingStatus = await VotesPermission.findAll();
+        if (!votingStatus[0].status) {
+            return res
+                .status(400)
+                .json({ error: "Voting period has not started yet" });
+        }
+        if (!req.body.candidateId) {
+            return res.status(400).json({ message: "Please select a candidate" });
+        }
+        const todaysDate = new Date();
+        const getCurrentYear = todaysDate.getFullYear();
+
+        const isCandidateExixt = await Candidate.findByPk(req.body.candidateId)
+
+        if (!isCandidateExixt) {
+            return res.status(400).json({ message: "Select candidate is not found" });
+        }
+
+        const hasUserVoteCandidate = await Vote.findOne({
+            where: {
+                userId: req.userData.id,
+                voteYear: getCurrentYear,
+                candidateId: req.body.candidateId,
+            },
+        });
+        if (hasUserVoteCandidate) {
+            return res.status(400).json({ message: "You cannot vote this candidate twice", hasUserVoteCandidate: true });
+        }
+
+        const candidate = req.body
+        candidate.userId = req.userData.id
+        candidate.voteYear = getCurrentYear
+
+        const savedVote = await Vote.create(candidate);
+
+        res.status(200).json({ message: `Voting ${req.userData.fullName} is done successfully`, data: savedVote });
+    } catch (error) {
+        res
+            .status(500)
+            .json({ message: "Internal server error", error: error.message });
+    }
+};
+
 module.exports = {
     getAllCandidates,
     createCandidate,
@@ -203,4 +324,7 @@ module.exports = {
     getSingleCandidate,
     approveCandidate,
     getAllCurrentCandidates,
+    getAllCurrentVotes,
+    voteCandidate,
+    getAllVotes,
 };
