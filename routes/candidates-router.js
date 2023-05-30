@@ -9,7 +9,7 @@ router.get("/", userAuthentication(["admin"]), candidatesController.getAllCandid
 
 router.get("/current", userAuthentication(["admin", "staff"]), candidatesController.getAllCurrentCandidates);
 
-router.post("/", userAuthentication(["admin"]), candidatesController.createCandidate);
+router.post("/", userAuthentication(["staff"]), candidatesController.createCandidate);
 
 router.put("/approve/:id", userAuthentication(["admin"]), candidatesController.approveCandidate);
 
