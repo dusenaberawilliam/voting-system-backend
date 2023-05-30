@@ -4,7 +4,7 @@ module.exports = (sequelize, DataTypes) => {
   class Vote extends Model {
     static associate(models) {
       Vote.belongsTo(models.Candidate);
-      models.Candidate.hasOne(Vote);
+      models.Candidate.hasMany(Vote);
       Vote.belongsTo(models.User);
       models.User.hasMany(Vote);
     }

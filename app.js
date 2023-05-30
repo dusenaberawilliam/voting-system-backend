@@ -10,6 +10,10 @@ app.use("/api/users", require("./routes/users-router"));
 app.use("/api/posts", require("./routes/posts-router"));
 app.use("/api/activities-permission", require("./routes/activities-permissions-router"));
 app.use("/api/candidates", require("./routes/candidates-router"));
+app.use("/api/leaders", require("./routes/approve-leaders-router"))
+app.get('/', (req, res) => {
+  res.send({ message: "Welcome to voting system APIs" });
+});
 app.all("*", (req, res) => {
   res.status(404).send({ message: "Route not found" });
 });

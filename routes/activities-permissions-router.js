@@ -29,4 +29,8 @@ router.put(
     activiesPermissionController.votingsDenial
 );
 
+router.get("/campaign-status", activiesPermissionController.getCampaignStatus)
+
+router.get("/voting-status", activiesPermissionController.getVotingStatus)
+
 module.exports = router;
